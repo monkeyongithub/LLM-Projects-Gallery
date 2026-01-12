@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>ChatBot - Advanced Multi-Agent</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+   <style>
+       .chat-gradient { background: linear-gradient(180deg, #444654 0%, #343541 100%); }
+       .agent-card:hover { background-color: #3e3f4b; }
+       ::-webkit-scrollbar { width: 5px; }
+       ::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; }
+       #responseMode {
+           appearance: none;
+           background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+           background-repeat: no-repeat;
+           background-position: right 0.5rem center;
+           background-size: 1em;
+       }
+       /* Toggle Switch Style */
+       .status-toggle { transition: all 0.3s ease; }
+       .active-status { background-color: #0d9488 !important; color: white !important; }
+   </style>
+</head>
+<body class="bg-[#343541] text-white flex h-screen overflow-hidden text-sm">
+
+
+   <div class="w-72 bg-[#202123] flex flex-col p-4 border-r border-white/10 overflow-y-auto">
+       <div class="mb-6">
+           <h2 class="font-bold text-lg flex items-center gap-2">
+               <i class="fas fa-robot text-teal-500"></i> ChatBot
+           </h2>
+       </div>
+
+
+       <div class="space-y-6 flex-1">
+           <div>
+               <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">User Experience</p>
+               <div class="flex bg-[#2a2b32] rounded-lg p-1">
+                   <button id="btnNewUser" onclick="setUserStatus(true)" class="status-toggle flex-1 py-1.5 rounded-md text-[11px] font-medium bg-transparent text-gray-400 active-status">
+                       First Visit
+                   </button>
+                   <button id="btnReturningUser" onclick="setUserStatus(false)" class="status-toggle flex-1 py-1.5 rounded-md text-[11px] font-medium bg-transparent text-gray-400">
+                       Returning
+                   </button>
+               </div>
+               <p id="statusDesc" class="text-[10px] text-gray-500 mt-2 italic px-1">"System will treat you as a new guest."</p>
+           </div>
+
+
+           <div>
+               <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">System Settings</p>
+
+               <div class="space-y-2 mb-4">
+                   <label class="text-xs text-gray-400">Agent Role (Persona)</label>
+                   <textarea id="configRole" rows="2" class="w-full bg-[#2a2b32] border border-white/10 rounded-md p-2 text-xs focus:ring-1 focus:ring-teal-500 outline-none resize-none" placeholder="e.g. Senior Consultant..."></textarea>
+               </div>
+
+
+               <div class="space-y-2 mb-4">
+                   <label class="text-xs text-gray-400">Restricted Topics</label>
+                   <textarea id="configRestriction" rows="2" class="w-full bg-[#2a2b32] border border-white/10 rounded-md p-2 text-xs focus:ring-1 focus:ring-red-500 outline-none resize-none" placeholder="e.g. No politics..."></textarea>
+               </div>
+
+
+               <div class="space-y-2 mb-4">
+                   <div class="flex justify-between text-[10px]">
+                       <label class="text-gray-400">Max Output Length</label>
+                       <span id="tokenLabel" class="text-teal-500 font-mono">512</span>
+                   </div>
+                   <input type="range" id="configMaxTokens" min="100" max="4000" step="100" value="512"
+                          class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
+                          oninput="document.getElementById('tokenLabel').innerText = this.value">
+               </div>
+
+
+               <div class="space-y-2 mb-4">
+                   <label class="text-xs text-gray-400">Max Tool Iterations</label>
+                   <input type="number" id="configMaxTools" value="5" min="1" max="20" class="w-full bg-[#2a2b32] border border-white/10 rounded-md p-2 text-xs focus:ring-1 focus:ring-teal-500 outline-none">
+               </div>
+           </div>
+
+
+           <div>
+               <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Live Agents</p>
+               <div class="space-y-2">
+                   <div class="agent-card p-3 rounded-lg bg-[#3e3f4b] border border-white/10 flex items-center justify-between">
+                       <span>🚀 Orchestrator</span>
+                       <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                   </div>
+               </div>
+           </div>
+       </div>
+
+
+       <div class="border-t border-white/10 pt-4 mt-4 space-y-2">
+           <label class="flex items-center justify-center w-full p-2 bg-indigo-600 hover:bg-indigo-700 rounded-md cursor-pointer transition text-xs font-medium">
+               <i class="fas fa-upload mr-2"></i> Upload Profile
+               <input type="file" id="profileUpload" class="hidden">
+           </label>
+           <button onclick="window.location.reload()" class="w-full p-2 border border-white/20 hover:bg-white/5 rounded-md text-xs transition">
+               <i class="fas fa-trash-alt mr-2"></i> Clear Conversation
+           </button>
+       </div>
+   </div>
+
+
+   <div class="flex-1 flex flex-col relative">
+       <div id="chatWindow" class="flex-1 overflow-y-auto p-6 space-y-6">
+           <div id="welcomeMessage" class="flex items-start max-w-3xl mx-auto space-x-4">
+               <div class="bg-teal-600 p-2 rounded w-8 h-8 flex items-center justify-center font-bold">G</div>
+               <div id="welcomeText" class="flex-1 bg-transparent leading-relaxed text-gray-200">
+                   Welcome! It's nice to meet you. I've initialized my systems for your first session. How can I help you get started?
+               </div>
+           </div>
+       </div>
+
+
+       <div class="p-6 bg-gradient-to-t from-[#343541] via-[#343541] to-transparent">
+           <div class="max-w-3xl mx-auto relative flex flex-col bg-[#40414f] rounded-xl shadow-2xl border border-white/10">
+               <div class="flex items-center px-4 py-2 border-b border-white/5 bg-[#444654] rounded-t-xl">
+                   <i class="fas fa-bolt text-[10px] text-yellow-500 mr-2"></i>
+                   <select id="responseMode" class="bg-transparent text-[11px] text-gray-300 focus:outline-none cursor-pointer pr-6 hover:text-white transition">
+                       <option value="pe" class="bg-[#202123]">Direct Response (PE)</option>
+                       <option value="rag" class="bg-[#202123]">Knowledge Retrieval (RAG)</option>
+                       <option value="agent" class="bg-[#202123]">Deep Thinking (Multi-Agent)</option>
+                   </select>
+               </div>
+               <div class="relative">
+                   <textarea id="userInput" rows="1" class="w-full bg-transparent p-4 pr-12 focus:outline-none resize-none text-gray-100 placeholder-gray-500" placeholder="Type your message..."></textarea>
+                   <button id="sendBtn" class="absolute right-3 bottom-3 text-gray-400 hover:text-teal-500 transition-colors">
+                       <i class="fas fa-paper-plane text-xl"></i>
+                   </button>
+               </div>
+           </div>
+           <p id="footerInfo" class="text-center text-[10px] text-gray-500 mt-3 uppercase tracking-tighter">
+               STATUS: NEW USER | TOKENS: 512 | MODE: PE
+           </p>
+       </div>
+   </div>
+
+
+   <script>
+       let isFirstVisit = true;
+       const sendBtn = document.getElementById('sendBtn');
+       const userInput = document.getElementById('userInput');
+       const chatWindow = document.getElementById('chatWindow');
+       const responseMode = document.getElementById('responseMode');
+
+       // Config Elements
+       const configRole = document.getElementById('configRole');
+       const configRestriction = document.getElementById('configRestriction');
+       const configMaxTokens = document.getElementById('configMaxTokens');
+       const configMaxTools = document.getElementById('configMaxTools');
+
+
+       // User Status Handler
+       function setUserStatus(isNew) {
+           isFirstVisit = isNew;
+           const btnNew = document.getElementById('btnNewUser');
+           const btnOld = document.getElementById('btnReturningUser');
+           const welcomeText = document.getElementById('welcomeText');
+           const statusDesc = document.getElementById('statusDesc');
+           const footerInfo = document.getElementById('footerInfo');
+
+
+           if (isNew) {
+               btnNew.classList.add('active-status');
+               btnOld.classList.remove('active-status');
+               welcomeText.innerText = "Welcome! It's nice to meet you. I've initialized my systems for your first session. How can I help you get started?";
+               statusDesc.innerText = '"System will treat you as a new guest."';
+               footerInfo.innerText = `STATUS: NEW USER | TOKENS: ${configMaxTokens.value} | MODE: ${responseMode.value.toUpperCase()}`;
+           } else {
+               btnOld.classList.add('active-status');
+               btnNew.classList.remove('active-status');
+               welcomeText.innerText = "Welcome back, my friend! Great to see you again. I'm ready to continue where we left off. What's on your mind today?";
+               statusDesc.innerText = '"System will use familiar, warm tone."';
+               footerInfo.innerText = `STATUS: RETURNING | TOKENS: ${configMaxTokens.value} | MODE: ${responseMode.value.toUpperCase()}`;
+           }
+       }
+
+
+       async function sendMessage() {
+           const text = userInput.value.trim();
+           if (!text) return;
+
+
+           appendMessage('User', text);
+           userInput.value = '';
+           userInput.rows = 1;
+
+
+           try {
+               const response = await fetch('/chat', {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({
+                       message: text,
+                       mode: responseMode.value,
+                       is_new_user: isFirstVisit, // Sending user status to backend
+                       config: {
+                           role: configRole.value,
+                           restrictions: configRestriction.value,
+                           max_tokens: parseInt(configMaxTokens.value),
+                           max_tools: parseInt(configMaxTools.value)
+                       }
+                   })
+               });
+
+               const data = await response.json();
+               appendMessage('Gemini', data.response);
+           } catch (error) {
+               appendMessage('Error', 'Connection failed.');
+           }
+       }
+
+
+       function appendMessage(sender, text) {
+           const div = document.createElement('div');
+           div.className = `flex items-start max-w-3xl mx-auto space-x-4 animate-in fade-in duration-500 ${sender === 'User' ? 'opacity-80' : ''}`;
+           let avatarColor = sender === 'User' ? 'bg-blue-600' : (sender === 'Error' ? 'bg-red-600' : 'bg-teal-600');
+           div.innerHTML = `<div class="${avatarColor} p-2 rounded w-8 h-8 flex items-center justify-center font-bold text-xs shadow-lg">${sender[0]}</div><div class="flex-1 whitespace-pre-wrap text-gray-200 leading-relaxed">${text}</div>`;
+           chatWindow.appendChild(div);
+           chatWindow.scrollTop = chatWindow.scrollHeight;
+       }
+
+
+       sendBtn.onclick = sendMessage;
+       userInput.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+       userInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; });
+   </script>
+</body>
+</html>
