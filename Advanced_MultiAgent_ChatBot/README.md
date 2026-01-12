@@ -1,5 +1,7 @@
 # Advanced Multi-Agent ChatBot
 
+<img width="2048" height="1475" alt="image" src="https://github.com/user-attachments/assets/5f10fd4a-c0d4-472b-900d-0471f8c0234a" />
+
 一个功能丰富的多智能体聊天机器人系统，结合了现代化UI界面、多种响应模式和智能代理协作能力。
 
 ## 🌟 项目概述
